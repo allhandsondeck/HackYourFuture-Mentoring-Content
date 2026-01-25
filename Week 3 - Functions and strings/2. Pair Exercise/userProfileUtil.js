@@ -4,7 +4,7 @@
 	•	Username: "john.doe"
 	•	Email: "john.doe@company.com"
 	•	Age
-	•	An object with above information in order
+	•	An object containing the above information as properties
 
   Requirements
 	•	Pure functions

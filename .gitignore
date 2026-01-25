@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Test coverage
+coverage/
+
+# Vitest
+.vitest/
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

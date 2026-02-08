@@ -28,7 +28,6 @@
   Requirements:
   • Use the specified array methods
   • Pure functions (don't modify original array)
-  • Arrow functions
   • Template literals where appropriate
 */
 

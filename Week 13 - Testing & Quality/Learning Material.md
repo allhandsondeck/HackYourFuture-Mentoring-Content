@@ -63,7 +63,7 @@ test("shows error when form is submitted empty", async () => {
 
 > 💡 **Rule of thumb:** If it's a function with inputs and outputs, unit test it thoroughly. If it's a component, test the behaviour a user would notice.
 
----
+> 💡 **Two layers now, a third one later.** These are the two layers you'll write by hand this week. A third — end-to-end tests, which drive your whole app in a real browser — sits on top of them; we'll place it in context once you've built the first two.
 
 # Setting up Vitest
 
@@ -105,6 +105,8 @@ export default defineConfig({
 ```
 
 The `jsdom` environment simulates a browser DOM in Node.js; this is what lets React Testing Library render your components during tests without a real browser.
+
+> 💡 **`globals: true` is why you won't always see imports.** With it set, `describe`, `it`, `expect`, and the mocking helper `vi` are available in every test file automatically, just like in Jest. Some examples in this material still import `describe`/`it`/`expect` for clarity, but `vi` is always global; that's why the async tests further down can call `vi.mock` without importing anything.
 
 ## Create a setup file
 
@@ -446,9 +448,7 @@ describe("ContactForm", () => {
 
 > ⚠️ **`userEvent.setup()` must be called before `render`.** It sets up a user session that properly handles pointer and keyboard events. Calling it after render can cause subtle timing issues.
 
-> 📝 **Note for instructors:** The component examples above use a basic `useState` form. If trainees have already built their contact form with React Hook Form (introduced in week 9), encourage them to test that version instead. The queries and assertions stay the same; only the component internals differ.
-
----
+> 💡 **Built your form with React Hook Form (from week 9)?** Test that version instead — the queries and assertions here stay exactly the same; only the component's internals differ. RTL doesn't care whether you used `useState` or a form library, which is precisely the point.
 
 # Async testing
 
@@ -523,9 +523,9 @@ describe("ProjectList", () => {
 
 `vi.mock('../api/projects')` replaces the entire module with an auto-mocked version. `vi.mocked()` gives you TypeScript-aware access to the mock so you can control what it returns per test with `mockResolvedValue`.
 
-> ⚠️ **`findByText` (note the `find`) returns a Promise and will wait up to 1000ms for the element to appear. Use `findBy` whenever you're waiting for something async to resolve.**
+> 💡 **Beyond module mocking: MSW.** Swapping out the module with `vi.mock` is perfect while you're learning. On real projects you'll often meet **Mock Service Worker (MSW)** instead: it intercepts requests at the network layer, so your component runs its real `fetch` code and only the network is faked. That keeps the test closer to production, and the same request handlers can power your local dev server too. Same idea as `vi.mock`, one layer lower down.
 
----
+> ⚠️ **`findByText` (note the `find`) returns a Promise and will wait up to 1000ms for the element to appear. Use `findBy` whenever you're waiting for something async to resolve.**
 
 # Additional Resources
 
@@ -540,9 +540,19 @@ https://www.youtube.com/watch?v=7dTTFW7yACQ&list=PL4cUxeGkcC9gm4_-5UsNmLqMosM-dz
 - [Common mistakes with RTL – Kent C. Dodds](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
 - [Vitest – Mocking](https://vitest.dev/guide/mocking)
 
----
-
 # Software Quality in Practice
+
+# The testing pyramid: where end-to-end fits
+
+You've now written the two layers you'll reach for most: fast **unit tests** for pure functions, and **component tests** for UI behaviour. There's a third layer worth knowing about, even though you won't write one this week: the **end-to-end (E2E) test**.
+
+An E2E test drives a real browser through a real, running version of your app. It clicks the actual buttons, types into the actual form, and asserts on what the actual page shows, with nothing mocked. Where a component test renders `ContactForm` in isolation, an E2E test loads your deployed portfolio, fills in the contact form, submits it, and checks the success message appears — exercising your routing, your real network calls, and your components all together.
+
+The industry-standard tool for this in 2026 is **Playwright** (Cypress is the other one you'll see). You write the test in TypeScript, and it can replay the same flow across Chrome, Firefox, and Safari.
+
+These three layers form the **testing pyramid**: many fast unit tests at the base, fewer component tests in the middle, and a small number of slow-but-realistic E2E tests at the top. E2E tests give the most confidence — they prove the whole thing works together — but they're also the slowest to run and the most brittle, so you write few of them and reserve them for your most important user journeys.
+
+> 💡 **Why the pyramid shape?** A failing unit test tells you exactly which function is wrong. A failing E2E test tells you _something_ in a long chain is wrong, and you still have to go find it. Lean on the fast, precise layers for the bulk of your coverage, and use a handful of E2E tests to confirm the critical paths hold together end to end.
 
 # Accessibility testing
 
@@ -761,6 +771,8 @@ Sentry.init({
   tracesSampleRate: 1.0,
 });
 ```
+
+> 💡 **`tracesSampleRate: 1.0` captures 100% of transactions.** That's fine for a low-traffic portfolio, but production apps usually lower it (say `0.1`, for 10%) so performance monitoring stays affordable and un-noisy once real traffic arrives.
 
 From then on, an error that would otherwise vanish into a user's console gets reported to your Sentry dashboard. You can also wrap part of your UI in Sentry's error boundary, so a crash shows a friendly fallback instead of a blank screen while still being reported:
 

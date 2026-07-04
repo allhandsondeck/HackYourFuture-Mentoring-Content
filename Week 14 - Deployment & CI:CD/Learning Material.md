@@ -30,7 +30,7 @@ Before this existed, "does it work?" meant one developer running tests on their 
 
 The acronym "CI/CD" hides a distinction worth knowing, because "CD" actually gets used two different ways, and people often use it loosely:
 
-- **Continuous Delivery** means every change that passes your pipeline is *ready* to release — packaged, tested, one click away from production — but a human still decides when that click happens.
+- **Continuous Delivery** means every change that passes your pipeline is _ready_ to release — packaged, tested, one click away from production — but a human still decides when that click happens.
 - **Continuous Deployment** removes that click entirely. Every change that passes the pipeline goes live automatically, with nobody approving each individual release.
 
 Vercel's default workflow is Continuous Deployment: merge to `main`, and it's live, full stop. Plenty of teams deliberately choose Continuous Delivery instead — for something like a banking system, an extra human checkpoint before production might be worth the added friction. Neither approach is "more correct." They trade speed against a manual gate, and the right choice depends on how expensive a mistake in production would actually be.
@@ -39,11 +39,11 @@ Vercel's default workflow is Continuous Deployment: merge to `main`, and it's li
 
 # CI/CD is a practice, not just a pipeline
 
-A YAML file is the easy part to point at, but it isn't actually what CI/CD *is*. Continuous Integration started as a practice, not a tool: developers merge their work into one shared mainline **multiple times a day**, in small pieces, rather than working in isolation for days or weeks and reconciling everything at the end. The pipeline is just the automated referee that checks each of those small merges — it exists to serve that habit, not the other way around.
+A YAML file is the easy part to point at, but it isn't actually what CI/CD _is_. Continuous Integration started as a practice, not a tool: developers merge their work into one shared mainline **multiple times a day**, in small pieces, rather than working in isolation for days or weeks and reconciling everything at the end. The pipeline is just the automated referee that checks each of those small merges — it exists to serve that habit, not the other way around.
 
 Continuous Deployment takes it one step further: once a change passes those checks on the mainline, it ships — automatically, not "eventually, after a review meeting." The whole point is to make shipping small changes routine and low-stakes instead of rare and terrifying.
 
-> 💡 **Key takeaway:** the pipeline automates the *checking*. The actual discipline of CI/CD is a human one — commit small, integrate constantly, and never let your copy of the code drift far from everyone else's.
+> 💡 **Key takeaway:** the pipeline automates the _checking_. The actual discipline of CI/CD is a human one — commit small, integrate constantly, and never let your copy of the code drift far from everyone else's.
 
 # Trunk-based development
 
@@ -51,7 +51,7 @@ That discipline needs a branching model to support it, and the standard one is *
 
 This is the opposite of workflows built around long-lived `feature/*` or `release/*` branches, where work stays isolated for days or weeks before one large merge at the end.
 
-> ⚠️ **Anti-pattern: long-lived branches.** The longer a branch lives, the further it drifts from `main` — and from everyone else's work. Merge conflicts get bigger the longer you wait, not smaller. Worse, you don't discover you conflict with a teammate's change until both branches are "done," which is the most expensive possible moment to find out. This is exactly the problem *Continuous* Integration was named to solve: integrating constantly, not once at the end.
+> ⚠️ **Anti-pattern: long-lived branches.** The longer a branch lives, the further it drifts from `main` — and from everyone else's work. Merge conflicts get bigger the longer you wait, not smaller. Worse, you don't discover you conflict with a teammate's change until both branches are "done," which is the most expensive possible moment to find out. This is exactly the problem _Continuous_ Integration was named to solve: integrating constantly, not once at the end.
 
 # Feature flags: merging without releasing
 
@@ -66,7 +66,7 @@ if (isFeatureEnabled("new-project-layout")) {
 return <ProjectGrid />;
 ```
 
-The new component can merge into `main` today — half-finished, disabled by default — and keep merging in small increments over the following two weeks, all on trunk, all covered by CI. Nobody sees it until the flag flips on. When it's ready, flipping the flag *is* the release; no risky big-bang merge required.
+The new component can merge into `main` today — half-finished, disabled by default — and keep merging in small increments over the following two weeks, all on trunk, all covered by CI. Nobody sees it until the flag flips on. When it's ready, flipping the flag _is_ the release; no risky big-bang merge required.
 
 > 💡 **This is what makes trunk-based development realistic, not just idealistic.** Small, frequent, low-risk merges to a shared branch — even for work that isn't finished — because the flag controls who sees it, not the branch it lives on.
 
@@ -91,12 +91,13 @@ A real-world pipeline usually has more stages than that minimal example, and the
 ```yaml
 steps:
   - name: Checkout code
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   - name: Set up Node.js
-    uses: actions/setup-node@v4
+    uses: actions/setup-node@v6
     with:
-      node-version: 20
+      node-version: 24
+      cache: npm
 
   - name: Install dependencies
     run: npm ci
@@ -148,12 +149,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -172,6 +174,8 @@ A few things worth naming explicitly:
 - `steps` run in order, top to bottom, on that same machine. Each `uses:` step runs a pre-built action; each `run:` step runs a shell command directly.
 
 > 💡 **Order is not cosmetic.** The workflow above only works because checkout happens before install, install happens before test, and test happens before build. Move any of these and the whole pipeline breaks — there's no code to test before it's checked out, and no `node_modules` to test with before install runs.
+
+> 💡 **What's `cache: npm`?** That one line tells `setup-node` to reuse the packages it downloaded on previous runs instead of fetching every dependency from scratch each time. It keys the cache on your `package-lock.json`, so it can never serve you stale dependencies — and it's one of the cheapest speed-ups you can add to any pipeline. You'll see it on almost every real-world workflow.
 
 # Reading a workflow run
 
@@ -199,7 +203,7 @@ With this in place, only the most recent push's run is ever left running — any
 
 # Enforcing it: branch protection rules
 
-A CI workflow that runs but doesn't actually *block* anything is only a suggestion. GitHub's **branch protection rules** (found under Settings → Branches on your repository) turn "please pass CI" into "you cannot merge until you do."
+A CI workflow that runs but doesn't actually _block_ anything is only a suggestion. GitHub's **branch protection rules** (found under Settings → Branches on your repository) turn "please pass CI" into "you cannot merge until you do."
 
 The setting that matters most here is **require status checks to pass before merging.** Once it's enabled, GitHub greys out the merge button on any pull request until your workflow finishes green — no exceptions, no "I'll just merge it and fix the failing test after."
 
@@ -267,7 +271,7 @@ Compare that to naively copying new files over old ones on a traditional server:
 
 The same codebase runs in several different places: your laptop, the CI pipeline, and production. Each of those places needs slightly different behaviour — a different API URL, different logging, different feature toggles — without you maintaining separate copies of your code for each one.
 
-**Environment variables** solve this. They're values injected from *outside* your code, so the same source stays identical everywhere while the values it reads change underneath it.
+**Environment variables** solve this. They're values injected from _outside_ your code, so the same source stays identical everywhere while the values it reads change underneath it.
 
 Where you read them from depends on where your code runs. Your portfolio is a Vite app, which means **two different runtimes** are involved:
 
@@ -290,10 +294,10 @@ Factor III, specifically, is **"Config"**: store configuration in the environmen
 
 Not every environment variable is protecting something, and it's worth explicitly separating two categories that tend to get lumped together under the umbrella of "env vars":
 
-- **Configuration** — values that change *where* or *how* your app behaves, with nothing to hide: an API base URL, a feature flag, a display name. These are often perfectly fine to make public.
+- **Configuration** — values that change _where_ or _how_ your app behaves, with nothing to hide: an API base URL, a feature flag, a display name. These are often perfectly fine to make public.
 - **Secrets** — values that grant access to something: an API key, a signing token, a service password. These must never reach the client, ever, under any circumstance.
 
-The `VITE_` prefix decision from the next section is really this distinction wearing a technical costume: configuration is safe to prefix and expose to the browser; secrets never are. Whenever you add a new environment variable to your project, ask which category it belongs to *before* deciding whether it gets the prefix — not after.
+The `VITE_` prefix decision from the next section is really this distinction wearing a technical costume: configuration is safe to prefix and expose to the browser; secrets never are. Whenever you add a new environment variable to your project, ask which category it belongs to _before_ deciding whether it gets the prefix — not after.
 
 # Public vs private environment variables in Vite
 
@@ -365,12 +369,12 @@ This fails loudly and immediately, with a message that names the exact problem �
 
 Vite doesn't read just one `.env` file — it looks for several, in a specific order, and later files override earlier ones where they overlap:
 
-| File | Loaded |
-| --- | --- |
-| `.env` | Always, in every mode |
-| `.env.local` | Always, except when running tests — never committed |
-| `.env.[mode]` (e.g. `.env.production`) | Only when building for that mode |
-| `.env.[mode].local` | Only in that mode, never committed |
+| File                                   | Loaded                                              |
+| -------------------------------------- | --------------------------------------------------- |
+| `.env`                                 | Always, in every mode                               |
+| `.env.local`                           | Always, except when running tests — never committed |
+| `.env.[mode]` (e.g. `.env.production`) | Only when building for that mode                    |
+| `.env.[mode].local`                    | Only in that mode, never committed                  |
 
 "Mode" here usually corresponds to `development` or `production`, matching how you ran Vite (`vite dev` vs `vite build`). It's worth double-checking this isn't automatically the same thing as your final deployment environment if your setup ever grows a staging tier in between the two.
 
@@ -412,7 +416,7 @@ export function getGithubStatsUrl() {
 
 3. **Test it**, covering both the configured case and the fallback
 4. **Add the same variable to Vercel** — Project Settings → Environment Variables — with the real production URL, scoped to Production (and a separate staging URL scoped to Preview, if your setup has one)
-5. **Push, and let the pipeline do the rest**: CI installs, lints, tests, and builds; Vercel then builds again with the *production* value baked in, and deploys it
+5. **Push, and let the pipeline do the rest**: CI installs, lints, tests, and builds; Vercel then builds again with the _production_ value baked in, and deploys it
 
 Notice what's absent from this list: nobody SSHed into a server, manually edited a config file after deploying, or had to remember to update something a week later. Every step lives either in your codebase — reviewed, tested, versioned — or in a dashboard built for exactly this purpose.
 
@@ -442,21 +446,23 @@ The uncomfortable part: they don't need to hack anything. Every request your fro
 
 Vercel gives every deployment HTTPS automatically, and it's worth understanding exactly what that buys you: encryption **in transit** — nobody sitting on the same coffee-shop Wi-Fi, or your internet provider, can read the traffic between a visitor's browser and your server. That's genuinely important, and free, and worth appreciating.
 
-What HTTPS does *not* do is protect data from the person the request was addressed to. A secret sent to the browser arrives over a perfectly encrypted connection — and then sits there, in full view, for the browser's own owner to read in DevTools whenever they like. Encryption in transit and "safe to send" are two completely different properties, and it's easy to mistake one for the other.
+What HTTPS does _not_ do is protect data from the person the request was addressed to. A secret sent to the browser arrives over a perfectly encrypted connection — and then sits there, in full view, for the browser's own owner to read in DevTools whenever they like. Encryption in transit and "safe to send" are two completely different properties, and it's easy to mistake one for the other.
 
-> 💡 **Key takeaway:** HTTPS keeps a secret safe *on the way* to the browser. It does nothing at all once it arrives. The only real protection is never sending it there in the first place.
+> 💡 **Key takeaway:** HTTPS keeps a secret safe _on the way_ to the browser. It does nothing at all once it arrives. The only real protection is never sending it there in the first place.
 
 # Seeing it for yourself: viewing the bundled source
 
 It's worth doing this once, deliberately, so the idea stops being abstract. Open any deployed website, open DevTools, and go to the **Sources** tab (or **Network**, filtered to `.js` files). Every piece of JavaScript your browser is running — including any string that was ever accidentally embedded in it — is sitting right there, fully readable, often only lightly minified.
 
-Search that source for a word you know shouldn't be there — `secret`, `key`, `password` — and on a poorly-configured site, you will occasionally find exactly that. Minification makes code hard to *read*, not hard to *search*; a secret key doesn't stop being a working secret key just because the variable name around it got shortened to `a`.
+Search that source for a word you know shouldn't be there — `secret`, `key`, `password` — and on a poorly-configured site, you will occasionally find exactly that. Minification makes code hard to _read_, not hard to _search_; a secret key doesn't stop being a working secret key just because the variable name around it got shortened to `a`.
 
 > ⚠️ **"It's minified" is not a security measure.** Minification is a size optimisation for network transfer, nothing more. Anything in your JavaScript bundle should be treated as public, permanently, from the moment it ships — because functionally, it already is.
 
 # Where a static site keeps a secret
 
 Your portfolio is a static Vite build with no traditional backend — so where would a secret even live? Vercel (and most static hosts) support **serverless functions**: any file in a top-level `/api` folder is deployed as its own small piece of real, server-side Node code, separate from your bundled frontend. Your contact form, for example, might post to `/api/contact`, which is the one place allowed to hold an email service's secret key — because it's the one place the browser never sees the source of.
+
+> 💡 **A note on function syntax.** The `(request, response)` style used below is Vercel's classic Node signature, and it's still fully supported. Newer Vercel functions can also use the web-standard form — `export function POST(request: Request)` returning a `Response`, the same `Request`/`Response` objects the browser itself uses. Both are valid; you'll run into each in real codebases, so it's worth recognising the two shapes.
 
 # A common way secrets leak: debug fields in a response
 
@@ -470,7 +476,7 @@ export default async function handler(request, response) {
   const apiKey = process.env.RESEND_API_KEY;
 
   try {
-    const result = await sendEmail({ name, email, message, apiKey });
+    await sendEmail({ name, email, message, apiKey });
     response.status(200).json({ success: true });
   } catch (error) {
     // ❌ apiKey ends up in the response body the moment sendEmail fails
@@ -487,7 +493,7 @@ export default async function handler(request, response) {
   const apiKey = process.env.RESEND_API_KEY;
 
   try {
-    const result = await sendEmail({ name, email, message, apiKey });
+    await sendEmail({ name, email, message, apiKey });
     response.status(200).json({ success: true });
   } catch (error) {
     response.status(500).json({ error: "Unable to send message" });
@@ -499,12 +505,15 @@ export default async function handler(request, response) {
 
 # Logging without leaking
 
-The fix above moved the secret out of the *response* — but it's worth being careful about where "just log it server-side instead" actually leads, too. Server-side logs still get *read* by something: a dashboard, a log aggregator, sometimes a whole team with broader access than you'd expect.
+The fix above moved the secret out of the _response_ — but it's worth being careful about where "just log it server-side instead" actually leads, too. Server-side logs still get _read_ by something: a dashboard, a log aggregator, sometimes a whole team with broader access than you'd expect.
 
 A safer habit is to log that a key was used, not the key itself:
 
 ```javascript
-console.error("sendEmail failed", { hasApiKey: Boolean(apiKey), message: error.message });
+console.error("sendEmail failed", {
+  hasApiKey: Boolean(apiKey),
+  message: error.message,
+});
 ```
 
 This tells you everything you need in order to debug — the key was present, and here's exactly what broke — without ever writing the actual secret anywhere it might be retained, forwarded, or viewed by more people than you intended.
@@ -513,7 +522,7 @@ This tells you everything you need in order to debug — the key was present, an
 
 # Validating input at the boundary
 
-A serverless function is a boundary — the one place your code meets input from outside your control. That's exactly where validation belongs: check that a request body has the shape you expect *before* you use it, rather than trusting it and hoping.
+A serverless function is a boundary — the one place your code meets input from outside your control. That's exactly where validation belongs: check that a request body has the shape you expect _before_ you use it, rather than trusting it and hoping.
 
 This isn't about defensive-programming everywhere. Internal function calls between code you wrote can trust each other. But the moment data crosses from "anyone on the internet" into your system, assume nothing about its shape until you've checked.
 
@@ -535,11 +544,11 @@ No browser, no form, no client-side validation anywhere in sight — just a raw 
 
 # CORS: who's allowed to call your API
 
-If you've ever seen a browser console error mentioning **CORS** while calling an API from client code, this is what that was about. **Cross-Origin Resource Sharing** is a browser-enforced rule: by default, JavaScript running on `your-portfolio.vercel.app` is *not* allowed to read a response from a different origin, unless that other origin explicitly says it's fine.
+If you've ever seen a browser console error mentioning **CORS** while calling an API from client code, this is what that was about. **Cross-Origin Resource Sharing** is a browser-enforced rule: by default, JavaScript running on `your-portfolio.vercel.app` is _not_ allowed to read a response from a different origin, unless that other origin explicitly says it's fine.
 
-Your own `/api` functions don't trigger this at all — they share the same origin as your frontend. It comes up the moment you call *someone else's* API directly from client-side code, or if you ever open your own API up to be called from other sites.
+Your own `/api` functions don't trigger this at all — they share the same origin as your frontend. It comes up the moment you call _someone else's_ API directly from client-side code, or if you ever open your own API up to be called from other sites.
 
-> 💡 **Worth knowing:** CORS is not something you "fix" by disabling it. The error is the browser protecting *users*, not you. If you control the API and genuinely need another site to call it, you configure that server to explicitly allow it. If you don't control it, that's usually a sign the call belongs behind your own serverless function instead of the browser — which conveniently also happens to be exactly the pattern that keeps secrets off the client.
+> 💡 **Worth knowing:** CORS is not something you "fix" by disabling it. The error is the browser protecting _users_, not you. If you control the API and genuinely need another site to call it, you configure that server to explicitly allow it. If you don't control it, that's usually a sign the call belongs behind your own serverless function instead of the browser — which conveniently also happens to be exactly the pattern that keeps secrets off the client.
 
 # Keeping dependencies from becoming the leak
 
@@ -559,7 +568,7 @@ One more habit worth carrying into any real API key you generate: give it the **
 
 Most services that issue API keys let you scope them — a send-only email key instead of one that can also read your entire account's history, a database credential that can only insert into one table instead of one with full administrative rights. If a key like that ever does leak despite everything else in this material, the damage it can do is bounded by exactly what you gave it permission to do in the first place.
 
-> 💡 **Key takeaway:** every other safeguard in this material reduces the *chance* of a leak. Least privilege is different — it reduces the *consequence* if one happens anyway. Both matter, for the same reason a seatbelt and a speed limit both matter, even though only one of them prevents the crash.
+> 💡 **Key takeaway:** every other safeguard in this material reduces the _chance_ of a leak. Least privilege is different — it reduces the _consequence_ if one happens anyway. Both matter, for the same reason a seatbelt and a speed limit both matter, even though only one of them prevents the crash.
 
 # A note on third-party form services
 
@@ -589,9 +598,9 @@ Before you consider a deployment finished, it's worth a five-minute pass over ex
 
 # Wrapping up
 
-You now have the other half of what it takes to ship software professionally. Writing features and tests (last week) proves your code works. This week's toolkit is what makes shipping that code *safe* to do again and again, without a human double-checking every step by hand: trunk-based development and feature flags as the practice, a fast-failing pipeline guarded by branch protection as the automation, and secret-conscious, dependency-aware configuration as the safety net underneath all of it.
+You now have the other half of what it takes to ship software professionally. Writing features and tests (last week) proves your code works. This week's toolkit is what makes shipping that code _safe_ to do again and again, without a human double-checking every step by hand: trunk-based development and feature flags as the practice, a fast-failing pipeline guarded by branch protection as the automation, and secret-conscious, dependency-aware configuration as the safety net underneath all of it.
 
-None of these ideas are independent of each other, which is worth sitting with for a moment. Small trunk-based merges are only safe *because* a test suite backs them up. A pipeline is only a real guarantee *because* branch protection makes it mandatory, not optional. A secret is only safe *because* it never crosses the one boundary — client code — where privacy stops existing. Pull on any one thread and the others explain why it's there.
+None of these ideas are independent of each other, which is worth sitting with for a moment. Small trunk-based merges are only safe _because_ a test suite backs them up. A pipeline is only a real guarantee _because_ branch protection makes it mandatory, not optional. A secret is only safe _because_ it never crosses the one boundary — client code — where privacy stops existing. Pull on any one thread and the others explain why it's there.
 
 This is also the final week of the core curriculum. Every skill from here is one you already have: read the problem carefully, write the smallest correct fix, prove it with a test, and ship it in a way you'd trust without watching over it.
 
